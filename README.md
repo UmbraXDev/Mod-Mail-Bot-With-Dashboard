@@ -49,13 +49,16 @@ Perfect for servers that want a fast, reliable, and visually polished support sy
 ## 🚀 Installation & Setup
 
 ### 1️⃣ **Clone the repo**
-```bash
+```
 git clone https://github.com/UmbraXDev/Mod-Mail-Bot-With-Dashboard
 cd Mod-Mail-Bot-With-Dashboard
+```
 2️⃣ Install dependencies
+```
 npm install
-
+```
 3️⃣ Create your .env file
+```
 DISCORD_TOKEN=your_bot_token_here
 CLIENT_ID=your_client_id_here
 CLIENT_SECRET=your_client_secret_here
@@ -75,8 +78,9 @@ FRONTEND_URL=http://localhost:3000
 COOKIE_SECURE=false
 COOKIE_SAMESITE=lax
 COOKIE_DOMAIN=
-
+```
 4️⃣ Start the bot
+```
 npm start
 ```
 
