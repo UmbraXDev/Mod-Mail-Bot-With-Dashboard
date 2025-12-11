@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket #<%= ticket._id.toString().substring(0, 8) %> - ModMail</title>
+  <link rel="stylesheet" href="/public/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Starfield Animation Background -->
+  <div class="stars-container">
+    <div class="stars"></div>
+    <div class="shooting-stars">
+      <div class="shooting-star"></div>
+      <div class="shooting-star"></div>
+      <div class="shooting-star"></div>
+      <div class="shooting-star"></div>
+      <div class="shooting-star"></div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="logo">✨ ModMail</div>
+    <ul>
+      <li><a href="/dashboard">📊 Dashboard</a></li>
+      <li><a href="/tickets">🎫 All Tickets</a></li>
+      <li><a href="/settings">⚙️ Settings</a></li>
+    </ul>
+    
+    <!-- User Info with Avatar -->
+    <div class="user-info">
+      <div class="user-avatar-container">
+        <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=256" 
+             alt="<%= user.username %>" 
+             class="user-avatar"
+             onerror="this.src='https://cdn.discordapp.com/embed/avatars/<%= parseInt(user.discriminator) % 5 %>.png'">
+      </div>
+      <div class="user-details">
+        <div class="user-name"><%= user.username %>#<%= user.discriminator %></div>
+        <div class="user-role">Staff Member</div>
+      </div>
+      <a href="/logout" class="btn btn-danger" style="margin-left: 1rem;">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Ticket Header -->
+    <div class="ticket-header">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+          <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+            🎫 Ticket #<%= ticket._id.toString().substring(0, 8) %>
+          </h1>
+          <span class="status-badge status-<%= ticket.status %>" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
+            <%= ticket.status === 'open' ? '🟢 Open' : '🔒 Closed' %>
+          </span>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+          <% if (ticket.status === 'open') { %>
+            <button onclick="closeTicket('<%= ticket._id %>')" class="btn btn-danger">
+              🔒 Close Ticket
+            </button>
+            <button onclick="claimTicket('<%= ticket._id %>')" class="btn btn-success">
+              ✋ Claim Ticket
+            </button>
+          <% } %>
+          <a href="/dashboard" class="btn btn-primary">← Back to Dashboard</a>
+        </div>
+      </div>
+
+      <!-- Ticket Info Grid -->
+      <div class="ticket-info">
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">👤 User</div>
+          <div class="ticket-info-value" style="display: flex; align-items: center; gap: 1rem;">
+            <% if (ticket.user && ticket.user.avatar) { %>
+              <img src="<%= ticket.user.avatar %>" 
+                   alt="<%= ticket.user.tag %>" 
+                   style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--primary-color); box-shadow: 0 0 20px rgba(88, 101, 242, 0.5);"
+                   onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+            <% } %>
+            <div>
+              <div style="font-size: 1.2rem; font-weight: 800;"><%= ticket.user ? ticket.user.tag : 'Unknown User' %></div>
+              <div style="font-size: 0.9rem; color: var(--text-secondary); font-family: 'Courier New', monospace;"><%= ticket.user_id %></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">📅 Created At</div>
+          <div class="ticket-info-value">
+            <%= new Date(ticket.created_at).toLocaleString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) %>
+          </div>
+        </div>
+
+        <% if (ticket.status === 'closed' && ticket.closed_at) { %>
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">🔒 Closed At</div>
+          <div class="ticket-info-value">
+            <%= new Date(ticket.closed_at).toLocaleString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) %>
+          </div>
+        </div>
+        <% } %>
+
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">🆔 Channel ID</div>
+          <div class="ticket-info-value" style="font-family: 'Courier New', monospace; font-size: 1rem;">
+            <%= ticket.channel_id %>
+          </div>
+        </div>
+      </div>
+
+      <% if (ticket.claimed_by) { %>
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(87, 242, 135, 0.15); border-radius: 12px; border: 1px solid rgba(87, 242, 135, 0.3);">
+          <span style="color: var(--secondary-color); font-weight: 700;">✋ Claimed by Staff Member</span>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="tickets-section">
+      <h2 class="section-title">💬 Conversation</h2>
+      
+      <div class="messages-container">
+        <% if (messages.length > 0) { %>
+          <% messages.forEach(message => { %>
+            <div class="message">
+              <% if (message.user && message.user.avatar) { %>
+                <img src="<%= message.user.avatar %>" 
+                     alt="<%= message.user.tag %>" 
+                     class="message-avatar">
+              <% } else { %>
+                <div class="message-avatar" style="background: linear-gradient(135deg, var(--primary-color), var(--accent-purple)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 1.2rem;">
+                  <%= message.user_id.substring(0, 2).toUpperCase() %>
+                </div>
+              <% } %>
+              
+              <div class="message-content">
+                <div class="message-author">
+                  <%= message.user ? message.user.tag : 'Unknown User' %>
+                  <% if (message.is_staff) { %>
+                    <span class="message-badge">🛡️ STAFF</span>
+                  <% } else { %>
+                    <span class="message-badge" style="background: linear-gradient(135deg, var(--secondary-color), #45cc6f);">👤 USER</span>
+                  <% } %>
+                </div>
+                
+                <div class="message-text">
+                  <%= message.content || '[No content]' %>
+                </div>
+
+                <% if (message.attachments && message.attachments.length > 0) { %>
+                  <div style="margin-top: 1rem;">
+                    <% message.attachments.forEach(attachment => { %>
+                      <% if (attachment.match(/\.(jpg|jpeg|png|gif|webp)$/i)) { %>
+                        <img src="<%= attachment %>" 
+                             alt="Attachment" 
+                             class="message-image"
+                             onclick="window.open('<%= attachment %>', '_blank')">
+                      <% } else { %>
+                        <a href="<%= attachment %>" 
+                           target="_blank" 
+                           class="btn btn-primary" 
+                           style="margin-top: 0.5rem;">
+                          📎 View Attachment
+                        </a>
+                      <% } %>
+                    <% }); %>
+                  </div>
+                <% } %>
+                
+                <div class="message-time">
+                  <%= new Date(message.timestamp).toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                  }) %>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="empty-state">
+            <div class="empty-state-icon">💬</div>
+            <h3 class="empty-state-title">No Messages Yet</h3>
+            <p class="empty-state-text">This ticket doesn't have any messages yet.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Add Note Section -->
+    <% if (ticket.status === 'open') { %>
+    <div class="tickets-section">
+      <h2 class="section-title">📝 Add Internal Note</h2>
+      
+      <div style="background: rgba(22, 22, 29, 0.95); border: 2px solid rgba(88, 101, 242, 0.3); border-radius: 20px; padding: 2rem; backdrop-filter: blur(20px);">
+        <div class="form-group">
+          <label for="note-content">Internal Note (Staff Only)</label>
+          <textarea id="note-content" 
+                    placeholder="Add a private note about this ticket..."
+                    style="min-height: 120px;"></textarea>
+        </div>
+        <button onclick="addNote('<%= ticket._id %>')" class="btn btn-warning">
+          📝 Add Note
+        </button>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Notes Display -->
+    <% if (ticket.notes && ticket.notes.length > 0) { %>
+    <div class="tickets-section">
+      <h2 class="section-title">📋 Internal Notes</h2>
+      
+      <div class="messages-container">
+        <% ticket.notes.forEach(note => { %>
+          <div class="message" style="border-left: 4px solid var(--warning-color);">
+            <div class="message-avatar" style="background: linear-gradient(135deg, var(--warning-color), #ffb930);">
+              📝
+            </div>
+            <div class="message-content">
+              <div class="message-author">
+                Staff Member
+                <span class="message-badge" style="background: linear-gradient(135deg, var(--warning-color), #ffb930); color: #000;">📋 NOTE</span>
+              </div>
+              <div class="message-text">
+                <%= note.content %>
+              </div>
+              <div class="message-time">
+                <%= new Date(note.timestamp).toLocaleString() %>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    async function closeTicket(ticketId) {
+      if (!confirm('Are you sure you want to close this ticket?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/ticket/${ticketId}/close`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✅ Ticket closed successfully!');
+          window.location.reload();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to close ticket'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ An error occurred while closing the ticket');
+      }
+    }
+
+    async function claimTicket(ticketId) {
+      try {
+        const response = await fetch(`/api/ticket/${ticketId}/claim`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✅ Ticket claimed successfully!');
+          window.location.reload();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to claim ticket'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ An error occurred while claiming the ticket');
+      }
+    }
+
+    async function addNote(ticketId) {
+      const content = document.getElementById('note-content').value.trim();
+      
+      if (!content) {
+        alert('❌ Please enter a note content');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/ticket/${ticketId}/note`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ content })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✅ Note added successfully!');
+          window.location.reload();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to add note'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ An error occurred while adding the note');
+      }
+    }
+
+    window.addEventListener('load', () => {
+      const messagesContainer = document.querySelector('.messages-container');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    });
+
+    document.querySelectorAll('.message').forEach((message, index) => {
+      message.style.opacity = '0';
+      message.style.transform = 'translateX(-30px)';
+      
+      setTimeout(() => {
+        message.style.transition = 'all 0.6s ease';
+        message.style.opacity = '1';
+        message.style.transform = 'translateX(0)';
+      }, index * 100);
+    });
+  </script>
+</body>
+</html>
