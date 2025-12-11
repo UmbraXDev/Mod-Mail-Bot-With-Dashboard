@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket <%= ticket._id %> - ModMail Bot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">📬 ModMail</div>
+    <ul>
+      <li><a href="/dashboard">Dashboard</a></li>
+    </ul>
+    <div class="user-info">
+      <a href="/dashboard" class="btn btn-primary" style="margin-right: 0.5rem;">← Back</a>
+      <a href="/logout" class="btn btn-danger">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="header">
+      <h1>Ticket Details</h1>
+      <p>Viewing conversation for user <%= ticket.user ? ticket.user.tag : ticket.user_id %></p>
+    </div>
+
+    <div class="ticket-header">
+      <div class="ticket-info">
+        <div class="ticket-info-card">
+          <div class="user-card-header">
+            <% if (ticket.user && ticket.user.avatar) { %>
+              <img src="<%= ticket.user.avatar %>" alt="<%= ticket.user.tag %>" class="user-card-avatar">
+            <% } else { %>
+              <div class="user-card-avatar" style="background: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5rem;">?</div>
+            <% } %>
+            <div class="user-card-info">
+              <div class="user-card-name"><%= ticket.user ? ticket.user.tag : 'Unknown User' %></div>
+              <div class="user-card-id"><%= ticket.user_id %></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">Ticket ID</div>
+          <div class="ticket-info-value"><code><%= ticket._id.toString() %></code></div>
+        </div>
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">Status</div>
+          <div class="ticket-info-value">
+            <span class="status-badge <%= ticket.status === 'open' ? 'status-open' : 'status-closed' %>">
+              <%= ticket.status.toUpperCase() %>
+            </span>
+          </div>
+        </div>
+        <div class="ticket-info-item">
+          <div class="ticket-info-label">Created</div>
+          <div class="ticket-info-value"><%= new Date(ticket.created_at).toLocaleString() %></div>
+        </div>
+        <% if (ticket.closed_at) { %>
+          <div class="ticket-info-item">
+            <div class="ticket-info-label">Closed</div>
+            <div class="ticket-info-value"><%= new Date(ticket.closed_at).toLocaleString() %></div>
+          </div>
+          <div class="ticket-info-item">
+            <div class="ticket-info-label">Closed By</div>
+            <div class="ticket-info-value"><%= ticket.closed_by || 'N/A' %></div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="tickets-section">
+      <h2 class="section-title">💬 Conversation</h2>
+      
+      <% if (messages.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-state-icon">📝</div>
+          <div class="empty-state-title">No Messages</div>
+          <div class="empty-state-text">There are no messages in this ticket yet.</div>
+        </div>
+      <% } else { %>
+        <div class="messages-container">
+          <% messages.forEach((msg, index) => { %>
+            <div class="message">
+              <% if (msg.user && msg.user.avatar) { %>
+                <img src="<%= msg.user.avatar %>" alt="<%= msg.user.tag %>" class="message-avatar">
+              <% } else { %>
+                <div class="message-avatar" style="background: linear-gradient(135deg, #5865f2, #7289da); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                  <%= msg.user_id.substring(0, 2).toUpperCase() %>
+                </div>
+              <% } %>
+              <div class="message-content">
+                <div class="message-author">
+                  <%= msg.user ? msg.user.tag : 'User: ' + msg.user_id %>
+                  <% if (msg.user_id === ticket.user_id) { %>
+                    <span class="message-badge">Customer</span>
+                  <% } else { %>
+                    <span class="message-badge" style="background: #2bcc6b;">Staff</span>
+                  <% } %>
+                </div>
+                <div class="message-text"><%= msg.content || '(No content)' %></div>
+                <div class="message-time"><%= new Date(msg.timestamp).toLocaleString() %></div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (ticket.status === 'open') { %>
+      <div class="ticket-actions">
+        <button onclick="closeTicketConfirm('<%= ticket._id %>')" class="btn btn-danger">
+          🔒 Close Ticket
+        </button>
+        <button onclick="deleteTicketConfirm('<%= ticket._id %>')" class="btn btn-danger" style="background: #e74c3c;">
+          🗑️ Delete Ticket
+        </button>
+      </div>
+    <% } else { %>
+      <div class="ticket-actions">
+        <button onclick="deleteTicketConfirm('<%= ticket._id %>')" class="btn btn-danger" style="background: #e74c3c;">
+          🗑️ Delete Ticket
+        </button>
+      </div>
+    <% } %>
+  </div>
+
+  <script>
+    function closeTicketConfirm(ticketId) {
+      if (!confirm('Are you sure you want to close this ticket? This cannot be undone.')) return;
+      
+      fetch(`/api/ticket/${ticketId}/close`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Ticket closed successfully');
+          window.location.href = '/dashboard';
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to close ticket'));
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        alert('❌ Failed to close ticket');
+      });
+    }
+
+    function deleteTicketConfirm(ticketId) {
+      if (!confirm('⚠️ Are you sure you want to DELETE this ticket? This will permanently remove the ticket, all messages, and the Discord channel. This action CANNOT be undone.')) return;
+      
+      fetch(`/api/ticket/${ticketId}/delete`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Ticket deleted successfully');
+          window.location.href = '/dashboard';
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to delete ticket'));
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        alert('❌ Failed to delete ticket');
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - ModMail Bot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <div class="logo">📬 ModMail</div>
+    <ul>
+      <li><a href="/dashboard">Dashboard</a></li>
+    </ul>
+    <div class="user-info">
+      <% if (user && user.id && user.avatar) { %>
+        <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=40" alt="Avatar" class="user-avatar">
+      <% } %>
+      <span><%= user ? user.username : 'Guest' %></span>
+      <a href="/logout" class="btn btn-danger" style="margin-left: 1rem;">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="status-label">🤖 Bot Ping</span>
+      <span class="status-value" id="status-bot-ping">-- ms</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">💾 Database</span>
+      <span class="status-value" id="status-db-ping">-- ms</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">⏱️ Uptime</span>
+      <span class="status-value" id="status-uptime">-- h</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">🌐 Guilds</span>
+      <span class="status-value" id="status-guilds">--</span>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top: 0; margin-top: -0.5rem;">
+    <div class="header" style="margin-bottom: 1.5rem;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">📬 ModMail Dashboard</h1>
+      <p style="font-size: 1.1rem; color: var(--text-secondary);">Manage your ModMail tickets and servers</p>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom: 3rem;">
+      <div class="stat-card">
+        <div class="number"><%= stats.total %></div>
+        <div class="label">Total Tickets</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="color: #2bcc6b;"><%= stats.open %></div>
+        <div class="label">Open</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="color: #ed4245;"><%= stats.closed %></div>
+        <div class="label">Closed</div>
+      </div>
+    </div>
+
+    <% if (isAdmin) { %>
+    <div class="servers-section">
+      <div class="section-header">
+        <h2 class="section-title">🛠️ Configured Servers (Admin Only)</h2>
+        <span class="section-count" id="servers-count">--</span>
+      </div>
+      <div class="servers-list" id="servers-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">🔌</div>
+          <div class="empty-state-title">No Servers Configured</div>
+          <div class="empty-state-text">Click 'Add' on a server in the Bot Servers section below.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="servers-section">
+      <div class="section-header">
+        <h2 class="section-title">🤖 Available Servers (Admin Setup)</h2>
+        <div id="bot-guilds-count" class="section-count">--</div>
+      </div>
+      <div id="bot-guilds" class="servers-list"></div>
+    </div>
+
+    <div class="tickets-section" id="guild-tickets-section" style="display:none;">
+      <div class="section-header">
+        <h2 class="section-title">📁 Tickets for <span id="selected-guild-name">Selected Guild</span></h2>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <span class="section-count" id="selected-guild-count">--</span>
+        </div>
+      </div>
+      <div id="guild-tickets"></div>
+    </div>
+
+    <!-- Edit Server Modal -->
+    <div id="server-edit-modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <h3>Edit Server</h3>
+        <input id="edit-id" type="hidden" />
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <input id="edit-name" placeholder="Name (optional)" class="p-2" />
+          <input id="edit-category" placeholder="Category ID" class="p-2" />
+          <input id="edit-role" placeholder="Staff Role ID" class="p-2" />
+          <input id="edit-log" placeholder="Log Channel ID" class="p-2" />
+          <label style="display:flex;align-items:center;gap:0.5rem;"><input type="checkbox" id="edit-default" /> Default</label>
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+            <button class="btn" onclick="closeEditModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="submitServerEdit()">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="tickets-section">
+      <div class="section-header">
+        <h2 class="section-title">📖 Open Tickets</h2>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <span class="section-count"><%= openTickets.length %> shown</span>
+          <span id="open-total-count" style="font-size:0.85rem;color:var(--text-muted);">(Total: <span id="open-total"><%= stats.open %></span>)</span>
+        </div>
+      </div>
+      <% if (openTickets.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-title">No Open Tickets</div>
+          <div class="empty-state-text">There are no open tickets at the moment.</div>
+        </div>
+      <% } else { %>
+        <div class="table-responsive" id="open-tickets-table-container">
+          <table id="open-tickets-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>User</th>
+                <th>Channel</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="open-tickets-body">
+              <% openTickets.forEach((ticket) => { %>
+                <tr class="ticket-row">
+                  <td><span class="ticket-id"><%= ticket._id.toString().substring(0, 8) %>...</span></td>
+                  <td>
+                    <div class="user-display">
+                      <% if (ticket.user && ticket.user.avatar) { %>
+                        <img src="<%= ticket.user.avatar %>" alt="<%= ticket.user.tag %>" class="user-avatar-small">
+                      <% } else { %>
+                        <div class="user-avatar-small" style="background: #5865f2;">?</div>
+                      <% } %>
+                      <span class="user-name"><%= ticket.user ? ticket.user.tag : ticket.user_id %></span>
+                    </div>
+                  </td>
+                  <td><code><%= ticket.channel_id %></code></td>
+                  <td><span class="timestamp"><%= new Date(ticket.created_at).toLocaleDateString() %></span></td>
+                  <td>
+                    <a href="/ticket/<%= ticket._id %>" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View</a>
+                    <button onclick="closeTicket('<%= ticket._id %>', event)" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Close</button>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <% if (openTickets.length >= 10) { %>
+        <div id="open-load-more-container" style="display:flex;justify-content:center;margin-top:0.75rem;">
+          <button class="btn btn-primary" id="open-load-more-btn" onclick="loadMoreOpenTickets()">Load More</button>
+        </div>
+        <% } %>
+      <% } %>
+    </div>
+
+    <div class="tickets-section">
+      <div class="section-header">
+        <h2 class="section-title">🔒 Closed Tickets</h2>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <span class="section-count"><%= closedTickets.length %> shown</span>
+          <span id="closed-total-count" style="font-size:0.85rem;color:var(--text-muted);">(Total: <span id="closed-total"><%= stats.closed %></span>)</span>
+        </div>
+      </div>
+      <% if (closedTickets.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-title">No Closed Tickets</div>
+          <div class="empty-state-text">No tickets have been closed yet.</div>
+        </div>
+      <% } else { %>
+        <div class="table-responsive" id="closed-tickets-table-container">
+          <table id="closed-tickets-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>User</th>
+                <th>Closed</th>
+                <th>Closed By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="closed-tickets-body">
+              <% closedTickets.forEach((ticket) => { %>
+                <tr>
+                  <td><span class="ticket-id"><%= ticket._id.toString().substring(0, 8) %>...</span></td>
+                  <td>
+                    <div class="user-display">
+                      <% if (ticket.user && ticket.user.avatar) { %>
+                        <img src="<%= ticket.user.avatar %>" alt="<%= ticket.user.tag %>" class="user-avatar-small">
+                      <% } else { %>
+                        <div class="user-avatar-small" style="background: #5865f2;">?</div>
+                      <% } %>
+                      <span class="user-name"><%= ticket.user ? ticket.user.tag : ticket.user_id %></span>
+                    </div>
+                  </td>
+                  <td><span class="timestamp"><%= new Date(ticket.closed_at).toLocaleDateString() %></span></td>
+                  <td><%= ticket.closed_by || 'N/A' %></td>
+                  <td>
+                    <a href="/ticket/<%= ticket._id %>" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View</a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <% if (closedTickets.length >= 10) { %>
+        <div id="closed-load-more-container" style="display:flex;justify-content:center;margin-top:0.75rem;">
+          <button class="btn btn-primary" id="closed-load-more-btn" onclick="loadMoreClosedTickets()">Load More</button>
+        </div>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+    const IS_STAFF = <%= typeof isStaff !== 'undefined' && isStaff ? 'true' : 'false' %>;
+    const IS_ADMIN = <%= typeof isAdmin !== 'undefined' && isAdmin ? 'true' : 'false' %>;
+
+    function closeTicket(ticketId, event) {
+      if (event) event.preventDefault();
+      if (!confirm('Are you sure you want to close this ticket?')) return;
+      
+      fetch(`/api/ticket/${ticketId}/close`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert('Ticket closed successfully');
+            location.reload();
+          } else {
+            alert('Error: ' + (data.error || 'Failed to close ticket'));
+          }
+        })
+        .catch(err => {
+          console.error('Error:', err);
+          alert('Failed to close ticket');
+        });
+    }
+    
+    // ===== Paginated ticket loading =====
+    let openTicketsPage = 1;
+    let closedTicketsPage = 1;
+    const ticketsPerPage = 10;
+    
+    async function loadMoreOpenTickets() {
+      try {
+        openTicketsPage++;
+        const offset = (openTicketsPage - 1) * ticketsPerPage;
+        const res = await fetch(`/dashboard?page=${openTicketsPage}`);
+        // For now, reload to get fresh paginated data
+        // In a more advanced implementation, this would be an API call
+        alert('Load more coming soon - pagination would reload with next 10 tickets');
+      } catch (err) {
+        console.error('Error loading more tickets', err);
+      }
+    }
+    
+    async function loadMoreClosedTickets() {
+      try {
+        closedTicketsPage++;
+        const offset = (closedTicketsPage - 1) * ticketsPerPage;
+        const res = await fetch(`/dashboard?page=${closedTicketsPage}&view=closed`);
+        alert('Load more coming soon - pagination would reload with next 10 closed tickets');
+      } catch (err) {
+        console.error('Error loading more tickets', err);
+      }
+    }
+    
+    // ===== Servers management =====
+    async function fetchServers() {
+      try {
+        const res = await fetch('/api/servers');
+        const data = await res.json();
+        const list = document.getElementById('servers-list');
+        const count = document.getElementById('servers-count');
+        if (!data.success || !data.servers || data.servers.length === 0) {
+          list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔌</div><div class="empty-state-title">No Servers Configured</div><div class="empty-state-text">Click 'Add' on a server in the Bot Servers section below.</div></div>`;
+          count.textContent = '0';
+          return;
+        }
+
+        count.textContent = data.servers.length;
+        list.innerHTML = '';
+        data.servers.forEach(srv => {
+          const el = document.createElement('div');
+          el.className = 'server-card p-3';
+          el.style.display = 'flex';
+          el.style.justifyContent = 'space-between';
+          el.style.alignItems = 'center';
+          el.innerHTML = `
+            <div style="display:flex;gap:1rem;align-items:center;">
+              <div style="font-weight:800;color:var(--text-color);">${srv.name || srv.guild_id}</div>
+              <div style="color:var(--text-muted);font-family:monospace;">${srv.guild_id}</div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <button class="btn btn-primary" onclick="openServerEdit('${srv._id}')">⚙️ Edit</button>
+              <button class="btn btn-danger" onclick="deleteServer('${srv._id}')">🗑️ Delete</button>
+            </div>
+          `;
+          list.appendChild(el);
+        });
+      } catch (err) {
+        console.error('Failed to fetch servers', err);
+      }
+    }
+
+    async function deleteServer(id) {
+      if (!confirm('Are you sure you want to delete this server config?')) return;
+      try {
+        const res = await fetch(`/api/servers/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          alert('Deleted');
+          fetchServers();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to delete'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to delete');
+      }
+    }
+
+    function openServerEdit(id) {
+      // fetch server details and populate modal
+      fetch(`/api/servers`).then(r => r.json()).then(data => {
+        const srv = data.servers.find(s => s._id === id);
+        if (!srv) return alert('Server not found');
+        document.getElementById('edit-id').value = srv._id;
+        document.getElementById('edit-name').value = srv.name || '';
+        document.getElementById('edit-category').value = srv.modmail_category_id || '';
+        document.getElementById('edit-role').value = srv.staff_role_id || '';
+        document.getElementById('edit-log').value = srv.log_channel_id || '';
+        document.getElementById('edit-default').checked = !!srv.is_default;
+        document.getElementById('server-edit-modal').style.display = 'flex';
+      }).catch(err => { console.error(err); alert('Failed to load server details'); });
+    }
+
+    function closeEditModal() {
+      document.getElementById('server-edit-modal').style.display = 'none';
+    }
+
+    async function submitServerEdit() {
+      const id = document.getElementById('edit-id').value;
+      const name = document.getElementById('edit-name').value.trim();
+      const modmail_category_id = document.getElementById('edit-category').value.trim();
+      const staff_role_id = document.getElementById('edit-role').value.trim();
+      const log_channel_id = document.getElementById('edit-log').value.trim();
+      const is_default = document.getElementById('edit-default').checked;
+      try {
+        const res = await fetch(`/api/servers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, modmail_category_id, staff_role_id, log_channel_id, is_default }) });
+        const data = await res.json();
+        if (data.success) {
+          alert('Saved');
+          closeEditModal();
+          fetchServers();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to save'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to save');
+      }
+    }
+
+    // Load servers on page load (only for admins)
+    document.addEventListener('DOMContentLoaded', () => {
+      if (IS_ADMIN) {
+        fetchServers();
+        fetchBotGuilds();
+      }
+      fetchPing();
+      setInterval(fetchPing, 10000);
+    });
+
+    // ===== Bot guilds & guild-specific tickets =====
+    async function fetchBotGuilds() {
+      try {
+        const res = await fetch('/api/bot-guilds');
+        const data = await res.json();
+        const container = document.getElementById('bot-guilds');
+        const countEl = document.getElementById('bot-guilds-count');
+        if (!data.success || !data.guilds) {
+          container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🤖</div><div class="empty-state-title">No guilds</div><div class="empty-state-text">Bot is not in any servers or failed to fetch.</div></div>';
+          countEl.textContent = '0';
+          return;
+        }
+
+        countEl.textContent = data.guilds.length;
+        container.innerHTML = '';
+        data.guilds.forEach(g => {
+          const el = document.createElement('div');
+          el.className = 'server-card p-3';
+          el.style.display = 'flex';
+          el.style.justifyContent = 'space-between';
+          el.style.alignItems = 'center';
+          el.innerHTML = `
+            <div style="display:flex;gap:1rem;align-items:center;flex:1;">
+              <div style="font-weight:800;color:var(--text-color);">${g.name || g.guild_id}</div>
+              <div style="color:var(--text-muted);font-family:monospace;font-size:0.85rem;">${g.guild_id}</div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <button class="btn" onclick="selectGuild('${g.guild_id}','${escapeHtml(g.name||g.guild_id)}', ${g.isAdmin})">📋 View</button>
+              ${g.isAdmin ? (g.isConfigured ? `<button class="btn btn-success" onclick="editGuild('${g.guild_id}')">✅ Configured</button>` : `<button class="btn btn-primary" onclick="addGuildServer('${g.guild_id}', '${escapeHtml(g.name||'')}')">➕ Add</button>`) : '<span style="color:var(--text-muted);font-size:0.85rem;">Not Admin</span>'}
+            </div>
+          `;
+          container.appendChild(el);
+        });
+      } catch (err) {
+        console.error('Failed to fetch bot guilds', err);
+      }
+    }
+
+    async function addGuildServer(guildId, guildName) {
+      try {
+        const res = await fetch('/api/servers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guild_id: guildId, name: guildName })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Server registered successfully!');
+          fetchServers();
+          fetchBotGuilds();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Failed to add server'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Failed to add server');
+      }
+    }
+
+    function editGuild(guildId) {
+      fetch('/api/servers').then(r => r.json()).then(data => {
+        const srv = data.servers.find(s => s.guild_id === guildId);
+        if (!srv) return alert('Server config not found');
+        openServerEdit(srv._id);
+      }).catch(err => { console.error(err); alert('Failed to load server'); });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    async function selectGuild(guildId, guildName, isAdmin) {
+      document.getElementById('selected-guild-name').textContent = guildName || guildId;
+      document.getElementById('guild-tickets-section').style.display = 'block';
+      fetchGuildTickets(guildId);
+    }
+
+    // Pagination state per guild
+    const guildPagination = {};
+
+    async function fetchGuildTickets(guildId, page = 1, limit = 10) {
+      try {
+        const res = await fetch(`/api/tickets?guild_id=${encodeURIComponent(guildId)}&page=${page}&limit=${limit}`);
+        const data = await res.json();
+        if (!data.success) {
+          document.getElementById('guild-tickets').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔒</div><div class="empty-state-title">Access Denied</div><div class="empty-state-text">You do not have permission to view tickets for this guild.</div></div>';
+          return;
+        }
+
+        // Initialize/update pagination state
+        guildPagination[guildId] = guildPagination[guildId] || { page: 0, total: data.total || 0, tickets: [] };
+
+        if (page === 1) {
+          guildPagination[guildId].tickets = data.tickets || [];
+        } else {
+          guildPagination[guildId].tickets = guildPagination[guildId].tickets.concat(data.tickets || []);
+        }
+        guildPagination[guildId].page = data.page || page;
+        guildPagination[guildId].limit = data.limit || limit;
+        guildPagination[guildId].total = data.total || guildPagination[guildId].total;
+
+        document.getElementById('selected-guild-count').textContent = guildPagination[guildId].total + ' tickets';
+        renderGuildTickets(guildId, guildPagination[guildId].tickets, guildPagination[guildId]);
+      } catch (err) {
+        console.error('Error fetching guild tickets', err);
+        document.getElementById('guild-tickets').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Error</div><div class="empty-state-text">Could not fetch tickets.</div></div>';
+      }
+    }
+
+    function renderGuildTickets(guildId, tickets, paging) {
+      const container = document.getElementById('guild-tickets');
+      if (!tickets || tickets.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">No Tickets</div><div class="empty-state-text">No tickets for this guild.</div></div>';
+        return;
+      }
+
+      let html = '<div class="table-responsive"><table><thead><tr><th>Ticket ID</th><th>User</th><th>Channel</th><th>Created</th><th>Actions</th></tr></thead><tbody>';
+      for (const ticket of tickets) {
+        html += `<tr><td><span class="ticket-id">${ticket._id.toString().substring(0,8)}...</span></td>`;
+        html += `<td><div class="user-display">${ticket.user && ticket.user.avatar ? `<img src="${ticket.user.avatar}" class="user-avatar-small">` : `<div class="user-avatar-small" style="background:#5865f2;">?</div>`}<span class="user-name">${ticket.user ? ticket.user.tag : ticket.user_id}</span></div></td>`;
+        html += `<td><code>${ticket.channel_id}</code></td>`;
+        html += `<td>${new Date(ticket.created_at).toLocaleString()}</td>`;
+        html += `<td><a href="/ticket/${ticket._id}" class="btn btn-primary">View</a> <button class="btn btn-danger" onclick="closeTicket('${ticket._id}', event)">Close</button></td></tr>`;
+      }
+      html += '</tbody></table></div>';
+
+      // Load more button
+      const total = paging.total || tickets.length;
+      const page = paging.page || 1;
+      const limit = paging.limit || 10;
+      const loaded = tickets.length;
+
+      if (loaded < total) {
+        html += `<div style="display:flex;justify-content:center;margin-top:0.75rem;"><button class="btn btn-primary" id="load-more-btn">Load more</button></div>`;
+      }
+
+      container.innerHTML = html;
+
+      if (loaded < total) {
+        document.getElementById('load-more-btn').addEventListener('click', () => {
+          fetchGuildTickets(guildId, page + 1, limit);
+        });
+      }
+    }
+
+    async function fetchPing() {
+      try {
+        const startTime = Date.now();
+        const res = await fetch('/api/ping');
+        const dbPing = Date.now() - startTime;
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('status-bot-ping').textContent = (data.ping ?? '--') + ' ms';
+          document.getElementById('status-db-ping').textContent = dbPing + ' ms';
+          document.getElementById('status-uptime').textContent = formatUptime(data.uptime);
+          document.getElementById('status-guilds').textContent = data.guildCount ?? '--';
+        }
+      } catch (err) {
+        console.error('Failed to fetch ping', err);
+      }
+    }
+
+    function formatUptime(seconds) {
+      if (!seconds) return '--';
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      return hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+    }
+  </script>
+</body>
+</html>
