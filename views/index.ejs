@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ModMail Bot</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <h1>📬 ModMail Bot</h1>
+      <div>
+        <% if (user) { %>
+          <a href="/dashboard" class="btn btn-primary">Dashboard</a>
+          <a href="/logout" class="btn btn-secondary">Logout</a>
+        <% } else { %>
+          <a href="/login" class="btn btn-primary">Login with Discord</a>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="container">
+      <h1>Professional ModMail System</h1>
+      <p>Manage user inquiries efficiently with our advanced ModMail bot</p>
+      <% if (!user) { %>
+        <a href="/login" class="btn btn-large">Get Started</a>
+      <% } else { %>
+        <a href="/dashboard" class="btn btn-large">Go to Dashboard</a>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="container">
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>📨 Easy Communication</h3>
+          <p>Users can DM the bot to create tickets instantly</p>
+        </div>
+        <div class="feature-card">
+          <h3>🎯 Organized Tickets</h3>
+          <p>All tickets organized in dedicated channels</p>
+        </div>
+        <div class="feature-card">
+          <h3>📊 Analytics Dashboard</h3>
+          <p>Track ticket statistics and response times</p>
+        </div>
+        <div class="feature-card">
+          <h3>🔒 Secure & Private</h3>
+          <p>OAuth authentication and role-based access</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 ModMail Bot. Professional ticket management system.</p>
+    </div>
+  </footer>
+</body>
+</html>
